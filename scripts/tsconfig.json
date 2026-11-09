@@ -1,6 +1,7 @@
 {
   // scripts/*.ts 는 Node 24가 타입만 지우고 직접 실행한다(tsx 없음).
   // src 파일을 가져올 때는 .ts 확장자를 붙이고, 가져오는 src 파일은 type import만 써야 한다.
+  // (Node 실행 가능 여부는 CI가 scripts를 실제로 실행해 확인한다. worker 타입이 src 전체를 끌어와 erasableSyntaxOnly는 쓰지 않는다)
   "compilerOptions": {
     "target": "es2024",
     "module": "preserve",
@@ -10,7 +11,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "allowImportingTsExtensions": true,
-    "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "noEmit": true

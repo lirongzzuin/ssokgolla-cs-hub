@@ -16,7 +16,7 @@ export interface Logger {
   child(fields: Fields): Logger;
 }
 
-// 010-0000-5678, 01000005678, 010 0000 5678, +82-10-0000-5678 → 010-****-5678
+// 010-0000-5678, 01000005678, 010 0000 5678, +82-10-0000-5678 → 010-****-5678 (예시는 가짜 번호)
 const PHONE = /(?:\+82[-\s]?)?0?1[016789][-\s]?\d{3,4}[-\s]?(\d{4})\b/g;
 // 키 이름으로 판별하는 필드: 값 전체를 마스킹한다
 const NAME_KEYS = /^(name|buyerName|receiverName|ordererName|customerName)$/i;

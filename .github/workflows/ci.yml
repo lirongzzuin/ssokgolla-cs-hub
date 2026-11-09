@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # check:public이 커밋 작성자 이메일까지 검사하므로 전체 이력이 필요하다
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      # Workers 런타임(Miniflare) 위에서 D1까지 실제로 돈다. 시크릿은 vitest.config.ts의 테스트 값을 쓴다
+      - run: npm test
+      - run: npm run check:public
+      # scripts가 Node 기본 TS 실행(타입 제거)으로 실제로 도는지
+      - run: npm run build-knowledge -- --draft
+      - run: node scripts/seed.ts
