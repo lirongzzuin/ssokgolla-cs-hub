@@ -112,7 +112,28 @@ flowchart TD
 - `orders`는 어떤 모듈도 import하지 않는다(가장 안쪽).
 - 어댑터는 `container.ts`만 고른다. 모듈은 어댑터 **인터페이스 타입**만 안다.
 
-## 4. 데이터 출처 — `DATA_SOURCE`
+## 4. 운영 형태와 데이터 출처
+
+### 4.0 운영 형태 — 상시 배포 없음 (2026-11-09 재기획)
+
+이 저장소의 목적은 **채널톡 ALF·태스크·웹훅 연동을 직접 설계하고 검증하는 것**이다. 그래서 서버를 상시 운영하지 않는다.
+
+```mermaid
+flowchart LR
+  CT[채널톡<br/>태스크 Code 스텝 · 웹훅] -->|HTTPS| T[Cloudflare 임시 터널<br/>cloudflared --url]
+  T --> H[내 PC: wrangler dev<br/>로컬 D1 · 데모 주문 20건]
+```
+
+| 선택 | 이유 |
+|---|---|
+| 로컬 `wrangler dev` + Cloudflare 임시 터널 | 계정·비용·서버 관리 없이 채널톡이 접근할 HTTPS 주소를 얻는다. 같은 코드를 `wrangler deploy`하면 무료 Workers에 그대로 올라간다 |
+| 데모 상점 주문(mock)만 운영 | 실제 고객 개인정보를 다루지 않고도 정책 분기 전부를 재현할 수 있다 |
+| 터널 주소가 바뀌는 불편은 생성기로 해결 | `npm run task-code`가 웹훅 URL + Code 스텝 5개를 주소·시크릿을 채워 다시 만든다 |
+| 문서로 확인 못 한 채널톡 값은 연동하면서 확인 | 웹훅 키 구조 로그(`WEBHOOK_DEBUG`), 받은 chatId를 돌려주는 `/alf/ping` |
+
+아래 4.1~4.2의 `DATA_SOURCE=live`(엔진 연동)는 실제 운영으로 확장할 때의 설계이며 지금은 운영하지 않는다.
+
+### 데이터 출처 — `DATA_SOURCE`
 
 | 값 | 판매채널 주문 | 공급처 주문·송장 | 용도 |
 |---|---|---|---|
@@ -127,14 +148,14 @@ flowchart TD
 
 `smartstore.ts`·`coupang.ts`는 "엔진 없이 판매채널을 직접 붙일 때"의 참고 구현으로 남긴다. 엔진에서 실제로 쓰고 있는 검증된 엔드포인트만 옮기고(§8), 쿠팡은 고정 IP 프록시가 필요하다는 점을 주석에 적는다.
 
-### 4.1 엔진 연동에 필요한 것 (엔진 쪽 작업, 이 저장소 범위 밖)
+### 4.1 엔진 연동에 필요한 것 (확장 시, 엔진 쪽 작업은 이 저장소 범위 밖)
 
 - [ ] 엔진에 읽기 전용 엔드포인트 추가: 주문번호로 주문 1건(통합 상태, 송장, 공급처 발주 여부, phone_last4, 마스킹 이름) / 변경분 목록(`updatedSince`)
 - [ ] 머신 토큰 인증(`Authorization: Bearer`). 엔진의 관리자 API는 로그인 + OTP라서 서버 간 호출에 쓸 수 없다
 - [ ] 노출 경로: 엔진은 Mac 홈서버 + Tailscale 안에 있어 Workers에서 닿지 않는다. Cloudflare Tunnel 등으로 **이 경로만** 공개
 - [ ] 엔진 응답 형식이 정해질 때까지 `engine.ts`는 인터페이스 + `TODO(verify-api)`로 둔다
 
-### 4.2 엔진 상태 → 통합 상태 매핑 (engine.ts 안에서만 수행)
+### 4.2 엔진 상태 → 통합 상태 매핑 (engine-client.ts 안에서만 수행)
 
 | 엔진 상태 | 통합 상태 |
 |---|---|
@@ -243,6 +264,7 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 | POST | `/alf/orders/cancel` | `X-ALF-Secret` | orderNo + phoneLast4 |
 | POST | `/alf/orders/address-change` | `X-ALF-Secret` | orderNo + phoneLast4 (새 주소는 받지 않음) |
 | POST | `/alf/orders/return-request` | `X-ALF-Secret` | orderNo + phoneLast4 + reason |
+| POST | `/alf/ping` | `X-ALF-Secret` | 연결 확인(받은 chatId를 돌려줌) |
 | POST | `/webhooks/channeltalk?token=` | query token | 상담 이벤트 적재 |
 | GET | `/reports/summary?from=&to=[&format=md]` | `X-Admin-Secret` | 운영 지표(JSON 또는 마크다운 표) |
 | GET | `/health` | 없음 | 상태·데이터 출처 |
@@ -264,8 +286,8 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 | 스마트스토어 주문 | `GET /v1/pay-order/seller/product-orders/last-changed-statuses`, `POST …/product-orders/query` | 확인·운영 중 | 위와 같음 |
 | 스마트스토어 문의 | `GET /v1/pay-user/inquiries`, `POST /v1/pay-merchant/inquiries/{no}/answer`, 상품 Q&A `GET /v1/contents/qnas` | 확인·운영 중 | 위와 같음 |
 | 스마트스토어 IP 제약 | 호출 IP 등록이 필요한지 | **미확인** | — |
-| 채널톡 태스크 Code 스텝 | §6.1 | 확인 | §6.1 |
-| 채널톡 웹훅 | §6.2 | 확인 | §6.2 |
+| 채널톡 태스크 Code 스텝 | §6.1 (axios 접근·상담 ID 경로는 `/alf/ping`으로 연동 시 확인) | 일부 확인 | §6.1 |
+| 채널톡 웹훅 | §6.2 (entity 필드 이름은 `WEBHOOK_DEBUG` 로그로 연동 시 확인) | 일부 확인 | §6.2 |
 | 채널톡 Open API | 인증, 상담 생성 | **미확인** | — |
 | dropship-engine 연동 API | §4.1 | **아직 없음** | — |
 
@@ -298,6 +320,11 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 | D11 | 쿠팡 브릿지 연결 테이블(`0002`) | 쿠팡 고객은 채널톡을 못 보므로 ALF 답변을 쿠팡에 되돌려야 하고, 그러려면 상담↔문의 연결이 필요 |
 | D12 | 브릿지는 자체 포트(`ChatCreator`)만 안다 | channeltalk → inquiries 한 방향 의존 유지(순환 방지) |
 | D13 | 지식 원문의 운영자 메모는 빌드 때 제거 + 금지어 검사 | 위탁 내부 사정이 ALF 답변으로 새는 것을 기계적으로 막는다 |
+| D14 | 상시 배포 없이 로컬 + 임시 터널로 채널톡 연동 | 목적은 채널톡 연동 역량을 보여주는 것. 서버 운영 비용·관리 없이 실제 채널톡과 연결된다 |
+| D15 | Code 스텝 코드는 생성기(`npm run task-code`)로 만든다 | 터널 주소가 바뀔 때마다 5개 태스크를 손으로 고치다 틀리는 일을 없앤다. 생성 코드는 테스트로 문법·형식을 검증 |
+| D16 | 연결 확인 태스크(`/alf/ping`)와 웹훅 키 구조 로그 | 문서로 확인하지 못한 값(상담 ID 경로, 웹훅 필드 이름)을 실제 연동에서 값 노출 없이 확인한다 |
+| D17 | `chatId`는 문자열·숫자·null 모두 허용 | 채널톡 상담 ID 타입이 확인되지 않았다. 타입이 달라 400이 나면 모든 태스크가 실패 분기로 빠진다 |
+| D18 | 공개 전 민감정보 검사(`npm run check:public`)를 CI에 포함 | 휴대폰 번호·이메일·시크릿 형태·로컬 경로·커밋 작성자 이메일을 기계적으로 막는다 |
 
 ## 12. 알려진 한계
 

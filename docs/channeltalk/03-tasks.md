@@ -35,17 +35,22 @@ flowchart TD
 - 허브 응답 `200`은 모두 판단 결과다(주문 없음 포함). 연동 문제(`400/401/5xx`)만 "요청 실패 시"로 간다.
 - ESCALATE에 붙이는 태그는 워크플로우(`04-workflows.md`)가 상담원 배정·알림에 쓴다.
 
-## Code 스텝 코드 (공통 틀)
+## Code 스텝 코드 — 손으로 쓰지 않고 생성한다
 
-`<허브주소>`, `<ALF_SECRET>`, `<경로>`만 바꿔 4개 태스크에 붙여넣는다.
+```bash
+npm run task-code -- --url https://<허브 주소>
+# → dist/channeltalk/00-ping.js … 04-return-request.js, webhook-url.txt
+```
+
+허브 주소(임시 터널)와 `ALF_SECRET`을 채운 코드 5개를 만든다. 터널 주소가 바뀌면 다시 생성해 붙여넣는다.
+생성 로직은 `scripts/lib/task-code.ts`, 테스트는 `tests/scripts/task-code.test.ts`(문법·형식·sandbox 분기 실행까지 확인).
+
+생성되는 코드의 모양(주문 취소 예시, 값은 생성 시 채워짐):
 
 ```js
-// 쏙골라마켓 CS 허브 호출 — <경로>: lookup | cancel | address-change | return-request
-// 확인 필요 ①: axios를 꺼내는 방법. 전역이 아니면 문서의 허용 require 방식으로 바꾼다.
-// 확인 필요 ②: 상담 ID 경로(context.userChat.id 가정). 틀리면 chatId 없이도 동작하지만 리포트 연결이 빠진다.
 export const handler = async (memory, context, isSandbox) => {
   if (isSandbox) {
-    // 미리보기에서는 외부 호출이 막혀 있어 고정 응답으로 분기만 확인한다
+    // 태스크 미리보기에서는 외부 요청이 막혀 있어 분기만 확인한다
     memory.put('hubDecision', 'INFO');
     memory.put('hubReasonCode', 'SANDBOX');
     memory.put('hubMessage', '(미리보기) 실제 상담에서 허브를 호출합니다.');
@@ -58,10 +63,9 @@ export const handler = async (memory, context, isSandbox) => {
     phoneLast4: String(memory.get('phoneLast4') ?? ''),
     chatId: context.userChat?.id,
   };
-  // 반품 태스크만: 사유 분류 CHANGE_OF_MIND | DEFECT | WRONG_ITEM | OTHER
-  // body.reason = memory.get('returnReason');
 
-  const res = await axios.post('https://<허브주소>/alf/orders/<경로>', body, {
+  // 400/401/5xx는 axios가 예외를 던진다 → Code 스텝의 "요청 실패 시" 분기로 간다
+  const res = await axios.post('https://<허브 주소>/alf/orders/cancel', body, {
     headers: { 'X-ALF-Secret': '<ALF_SECRET>' },
     timeout: 10000,
   });
@@ -75,7 +79,17 @@ export const handler = async (memory, context, isSandbox) => {
 };
 ```
 
-- 시크릿을 코드에 직접 넣는 이유: 채널톡 Code 스텝의 시크릿 저장 기능을 문서에서 찾지 못했다. 그래서 `ALF_SECRET`은 `/alf/*`만 열 수 있게 분리해 두었다(리포트·웹훅 시크릿과 다름). 교체할 때는 `wrangler secret put ALF_SECRET` → 4개 태스크 코드 수정 순서로 한다.
+- **시크릿을 코드에 직접 넣는 이유**: 채널톡 Code 스텝의 시크릿 저장 기능을 문서에서 찾지 못했다. 그래서 `ALF_SECRET`은 `/alf/*`만 열 수 있게 분리했다(리포트·웹훅 시크릿과 다름). 바꾸려면 `npm run setup -- --force` → 허브 재시작 → `npm run task-code` → 5개 태스크에 다시 붙여넣기.
+- **로컬 검증**: 생성한 코드를 채널톡 Code 스텝과 같은 조건(전역 axios, memory.get/put/save, 숫자 chatId)으로 Node에서 실행해 터널 주소로 호출하고, 5개 모두 기대 결과·실패 분기(401 → 예외)를 확인했다(2026-11-09).
+
+## T0. 연결 확인 (`/alf/ping`) — 주문 태스크보다 먼저
+
+| 항목 | 내용 |
+|---|---|
+| 목적 | Code 스텝에서 axios 호출·시크릿·상담 ID 경로가 맞는지 확인 |
+| 트리거 | "연결 테스트" (운영에서는 끄거나 지운다) |
+| 스텝 | Code(`00-ping.js`) → Send Message(`hubMessage`) / 실패 시 "허브 연결 실패" |
+| 기대 | `허브 연결 정상 (chatId: …)` — chatId가 "없음"이면 `context.userChat.id` 경로가 다른 것 |
 
 ## 태스크별 설정
 
@@ -116,10 +130,10 @@ export const handler = async (memory, context, isSandbox) => {
 
 ## 검증 체크리스트 — 태스크
 
-배포한 허브(mock 모드)와 `npm run seed` 주문으로 실제 상담 창에서 확인한다.
+로컬 허브 + 임시 터널(`docs/setup-guide.md` 3단계)과 `npm run seed` 주문으로 실제 상담 창에서 확인한다.
 
-- [ ] Code 스텝에서 `axios` 호출이 되는가(안 되면 꺼내는 방법 확인 → 위 코드 수정)
-- [ ] `context.userChat.id`가 실제 상담 ID인가(`task_logs.chat_id`와 웹훅 상담 ID가 같은지 `npm run report`로 확인)
+- [ ] T0 연결 확인: `허브 연결 정상 (chatId: …)`가 오는가(axios·시크릿 확인)
+- [ ] T0의 chatId가 웹훅 로그의 상담 ID와 같은가(같아야 태스크 결과가 상담 리포트에 연결된다)
 - [ ] 시크릿을 틀리게 넣으면 "요청 실패 시" 분기로 가는가(401이 실패로 처리되는지)
 - [ ] 주문번호를 틀리게 말하면 다시 묻는가(200 + `ORDER_NOT_FOUND` → 재수집)
 - [ ] `hubMessage`가 고쳐지지 않고 그대로 나가는가

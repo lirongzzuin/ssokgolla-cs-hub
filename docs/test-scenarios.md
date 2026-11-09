@@ -2,7 +2,7 @@
 
 채널톡 실제 상담 창에 하나씩 입력하고, 기대 결과와 같으면 ○, 다르면 ×와 실패 사례 번호(`05-tuning-log.md`)를 적는다.
 
-- 허브는 mock 모드(`DATA_SOURCE=mock`)로 배포하고 **`npm run seed` 직후**에 테스트한다. 반품 기간 판단이 seed 시점 기준 상대 날짜라서다.
+- 허브는 로컬 + 임시 터널로 연결하고(`docs/setup-guide.md` 3단계) **`npm run seed` 직후**에 테스트한다. 반품 기간 판단이 seed 시점 기준 상대 날짜라서다.
 - 주문번호·뒤 4자리는 mock 데이터(`src/adapters/mock-fixtures.ts`)다. 실제 고객 정보가 아니다.
 - 구성: **A 단순 FAQ 8 · B 태스크 필요 12 · C 이관해야 정상 6 · D 범위 밖 4**
 

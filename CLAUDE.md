@@ -3,6 +3,7 @@
 쏙골라마켓(스마트스토어·쿠팡 위탁판매)의 CS 자동화 허브.
 채널톡 ALF 태스크가 호출하는 단순한 JSON API를 제공하고, 상담 이벤트를 쌓아 운영 리포트를 만든다.
 공개 저장소다. 깊이보다 명확한 구조, 읽기 쉬운 코드, 정리된 문서를 우선한다.
+상시 배포하지 않는다. 로컬 `wrangler dev` + 임시 터널로 채널톡과 연동한다(docs/architecture.md §4.0).
 
 설계 전체는 `docs/architecture.md`에 있다. 이 파일에는 코드를 쓸 때 지킬 규칙만 적는다.
 
@@ -15,7 +16,11 @@ Cloudflare Workers · TypeScript(strict) · Hono · zod · D1(ORM 없음, SQL �
 
 ## 명령어
 ```bash
+npm run setup      # .dev.vars 무작위 시크릿 생성(처음 한 번)
 npm run dev        # wrangler dev (로컬 D1, DATA_SOURCE=mock)
+npm run tunnel     # cloudflared 임시 터널 → 채널톡이 접근할 https 주소
+npm run task-code -- --url https://…  # 채널톡 웹훅 URL + Code 스텝 코드 5개 생성(dist/, 커밋 금지)
+npm run check:public  # 공개 전 민감정보 검사(CI에서도 실행)
 npm test           # vitest
 npm run typecheck
 npm run lint       # biome check
@@ -49,7 +54,8 @@ npm run cf-typegen # wrangler.jsonc를 바꾸면 worker-configuration.d.ts 재�
 ## 개인정보
 - 전화번호 전체, 실명, 주소 원문은 저장하지 않고 로그에도 남기지 않는다. 저장하는 값은 `phone_last4`와 마스킹된 이름(`김*수`)뿐이다.
 - `logger.ts`는 전화번호·이름·주소 패턴을 마스킹한다. 로그는 반드시 이 로거로 남긴다.
-- 테스트 픽스처, seed, 문서 예시에는 가짜 값만 쓴다(`홍*동`, `010-0000-1234`).
+- 테스트 픽스처, seed, 문서 예시에는 가짜 값만 쓴다(`홍*동`). 전화번호 예시는 가운데 자리를 `0000`으로 쓴다(`010-0000-1234`) — `check:public`이 그 외 번호를 막는다.
+- 커밋 작성자 이메일은 GitHub noreply만 쓴다(저장소 로컬 git config에 설정됨).
 - "쏙골라마켓"은 실제 운영 중인 스마트스토어 상호이고, 운영 경험을 보여주기 위해 공개 저장소에서도 그대로 쓴다. 대신 사업자등록번호, 판매자 연락처·주소, 실제 주문번호, 공급처 실명, 매입가·마진 같은 실제 운영 값은 코드·문서·커밋 어디에도 넣지 않는다. 공급처는 `SUPPLIER_A` 같은 코드로만 쓴다.
 - `customerMessage`에는 공급처 이름, 공급처 주문번호, 매입가 같은 위탁판매 내부 정보를 넣지 않는다. 송장 근거 없는 도착일을 약속하지 않는다. 테스트로 이를 검증한다.
 
