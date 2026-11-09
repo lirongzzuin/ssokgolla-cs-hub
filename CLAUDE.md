@@ -10,7 +10,7 @@
 Cloudflare Workers · TypeScript(strict) · Hono · zod · D1(ORM 없음, SQL 마이그레이션) · Vitest · Cron Triggers · Biome(lint/format)
 
 - 새 의존성을 추가하려면 먼저 이유를 말하고 사용자 확인을 받는다.
-- 확인된 의존성: `hono`, `zod`, `wrangler`, `typescript`, `vitest`, `@cloudflare/vitest-pool-workers`, `@cloudflare/workers-types`, `@biomejs/biome`
+- 확인된 의존성: `hono`, `zod`, `wrangler`, `typescript`, `vitest`, `@cloudflare/vitest-plugin`(구 vitest-pool-workers), `@biomejs/biome`, `@types/node`(scripts 타입 검사용). Workers 타입은 `wrangler types`로 생성한다(`@cloudflare/workers-types` 대신).
 - `scripts/*.ts`는 Node 24의 기본 TS 실행(`node scripts/x.ts`)으로 돌린다. tsx는 쓰지 않는다.
 
 ## 명령어
@@ -19,10 +19,16 @@ npm run dev        # wrangler dev (로컬 D1, DATA_SOURCE=mock)
 npm test           # vitest
 npm run typecheck
 npm run lint       # biome check
-npm run db:migrate # 로컬 D1 마이그레이션
-npm run seed       # mock 주문 20건
-npm run report     # 운영 지표 마크다운 표
+npm run db:migrate # 로컬 D1 마이그레이션 (배포: db:migrate:remote)
+npm run seed       # mock 주문 20건 upsert, 상담·태스크 기록은 유지 (배포: seed:remote)
+npm run report     # 운영 지표 마크다운 표 (REPORT_BASE_URL, ADMIN_SECRET로 배포 대상 지정)
+npm run build-knowledge  # docs/knowledge-source → dist/knowledge (--draft: 빈 값 허용)
+npm run cf-typegen # wrangler.jsonc를 바꾸면 worker-configuration.d.ts 재생성
 ```
+
+- 테스트는 `@cloudflare/vitest-plugin`으로 Workers 런타임(Miniflare)에서 돌고, D1 마이그레이션을 실제로 적용한다.
+- `docs/test-scenarios.md`의 B·C 기대 결과는 `tests/scenarios.test.ts`와 같아야 한다. 한쪽을 고치면 다른 쪽도 고친다.
+- 정책 표(`orders/policy.ts`)를 바꾸면 `tests/orders/policy.test.ts`의 EXPECTED 표와 `docs/architecture.md` §5.2 표를 같이 고친다.
 
 ## 모듈 규칙
 - 기능 하나 = `src/modules/<name>/` 폴더 하나. 모듈은 자기 폴더 안에서 완결된다.
