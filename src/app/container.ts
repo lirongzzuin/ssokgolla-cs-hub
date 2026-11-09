@@ -6,7 +6,12 @@ import { EngineSupplier } from '../adapters/supplier/engine';
 import { MockSupplier } from '../adapters/supplier/mock';
 import type { SupplierAdapter } from '../adapters/supplier/types';
 import { createAlfTaskService, createTaskLogRepository } from '../modules/alf-tasks';
+import { type ChannelTalkClient, LiveChannelTalkClient, MockChannelTalkClient } from '../modules/channeltalk';
+import { createCoupangBridge, createInquiryRepository, createInquiryService } from '../modules/inquiries';
 import { createOrderRepository, createOrderService } from '../modules/orders';
+import { createReportService } from '../modules/reports';
+import { createSyncService } from '../modules/sync';
+import { createCursorStore } from './cursors';
 import { type AppConfig, type Env, readConfig } from './env';
 import { createLogger, type Logger } from './logger';
 
@@ -21,16 +26,22 @@ export interface Adapters {
   supplier: SupplierAdapter;
   /** 쿠팡 문의 브릿지가 읽는 쿠팡 문의 */
   coupangInquiries: InquirySource;
+  channelTalk: ChannelTalkClient;
 }
 
 export function createAdapters(config: AppConfig, now: () => Date): Adapters {
   if (config.dataSource === 'live') {
     const client = new EngineClient(config.engineBaseUrl, config.engineToken);
     const sales = new EngineSalesChannel(client);
-    return { sales, supplier: new EngineSupplier(client), coupangInquiries: sales };
+    return {
+      sales,
+      supplier: new EngineSupplier(client),
+      coupangInquiries: sales,
+      channelTalk: new LiveChannelTalkClient(),
+    };
   }
   const sales = new MockSalesChannel(now);
-  return { sales, supplier: new MockSupplier(now), coupangInquiries: sales };
+  return { sales, supplier: new MockSupplier(now), coupangInquiries: sales, channelTalk: new MockChannelTalkClient() };
 }
 
 export interface ContainerOptions {
@@ -43,11 +54,37 @@ export function createContainer(env: Env, opts: ContainerOptions = {}) {
   const config = readConfig(env);
   const now = opts.now ?? (() => new Date());
   const log = opts.logger ?? createLogger({ service: 'cs-hub', dataSource: config.dataSource });
+  const adapters = opts.adapters ?? createAdapters(config, now);
+  const cursors = createCursorStore(env.DB);
+
   const orderRepo = createOrderRepository(env.DB);
   const orders = createOrderService({ repo: orderRepo, now });
+
+  const inquiryRepo = createInquiryRepository(env.DB);
+  const coupangBridge = createCoupangBridge({
+    enabled: config.coupangBridgeEnabled,
+    source: adapters.coupangInquiries,
+    chats: adapters.channelTalk,
+    repo: inquiryRepo,
+    cursors,
+    now,
+    log,
+  });
+  const inquiries = createInquiryService({ repo: inquiryRepo, log, replyListener: coupangBridge.replyListener });
+
   const alfTasks = createAlfTaskService({
     orders,
     taskLogs: createTaskLogRepository(env.DB),
+    now,
+    log,
+    outcomeListener: inquiries,
+  });
+
+  const sync = createSyncService({
+    sales: adapters.sales,
+    supplier: adapters.supplier,
+    orders: orderRepo,
+    cursors,
     now,
     log,
   });
@@ -57,11 +94,14 @@ export function createContainer(env: Env, opts: ContainerOptions = {}) {
     config,
     now,
     log,
-    db: env.DB,
-    adapters: opts.adapters ?? createAdapters(config, now),
+    adapters,
     orderRepo,
     orders,
     alfTasks,
+    inquiries,
+    coupangBridge,
+    reports: createReportService(env.DB),
+    sync,
   };
 }
 

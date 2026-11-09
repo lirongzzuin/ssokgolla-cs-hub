@@ -178,6 +178,19 @@ export function createOrderRepository(db: D1Database) {
       return id;
     },
 
+    /**
+     * 판매채널 쪽 변화 없이 공급처 발주만 새로 들어온 경우. 발주 전(PAID)이던 주문만 발주 후로 올린다.
+     * 다른 상태(취소 요청 등)는 건드리지 않는다.
+     */
+    async promoteToSupplierOrdered(id: number, now: Date): Promise<void> {
+      await db
+        .prepare(
+          `UPDATE sales_orders SET status = 'SUPPLIER_ORDERED', updated_at = ?2 WHERE id = ?1 AND status = 'PAID'`,
+        )
+        .bind(id, now.toISOString())
+        .run();
+    },
+
     async upsertSupplierOrder(s: SupplierOrderInput): Promise<void> {
       await db
         .prepare(

@@ -2,8 +2,11 @@ import { createContainer } from './app/container';
 import type { Env } from './app/env';
 import { createErrorHandler } from './app/errors';
 import { createRouter } from './app/hono';
+import { runScheduledJobs } from './app/jobs';
 import { createLogger } from './app/logger';
 import { alfTaskRoutes } from './modules/alf-tasks';
+import { channelTalkWebhookRoutes } from './modules/channeltalk';
+import { reportRoutes } from './modules/reports';
 
 /**
  * 앱 조립. 라우트 마운트와 scheduled 연결만 두고 로직은 넣지 않는다.
@@ -21,9 +24,14 @@ app.notFound((c) => c.json({ ok: false, reasonCode: 'NOT_FOUND', message: '없�
 
 app.get('/health', (c) => c.json({ ok: true, dataSource: c.var.container.config.dataSource }));
 app.route('/alf', alfTaskRoutes);
+app.route('/webhooks', channelTalkWebhookRoutes);
+app.route('/reports', reportRoutes);
 
 export default {
   fetch: app.fetch,
+  scheduled: (_controller, env, ctx) => {
+    ctx.waitUntil(runScheduledJobs(createContainer(env)));
+  },
 } satisfies ExportedHandler<Env>;
 
 export { app };
