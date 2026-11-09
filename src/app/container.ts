@@ -5,6 +5,7 @@ import type { InquirySource, SalesChannelAdapter } from '../adapters/sales-chann
 import { EngineSupplier } from '../adapters/supplier/engine';
 import { MockSupplier } from '../adapters/supplier/mock';
 import type { SupplierAdapter } from '../adapters/supplier/types';
+import { createAlfTaskService, createTaskLogRepository } from '../modules/alf-tasks';
 import { createOrderRepository, createOrderService } from '../modules/orders';
 import { type AppConfig, type Env, readConfig } from './env';
 import { createLogger, type Logger } from './logger';
@@ -43,6 +44,13 @@ export function createContainer(env: Env, opts: ContainerOptions = {}) {
   const now = opts.now ?? (() => new Date());
   const log = opts.logger ?? createLogger({ service: 'cs-hub', dataSource: config.dataSource });
   const orderRepo = createOrderRepository(env.DB);
+  const orders = createOrderService({ repo: orderRepo, now });
+  const alfTasks = createAlfTaskService({
+    orders,
+    taskLogs: createTaskLogRepository(env.DB),
+    now,
+    log,
+  });
 
   return {
     env,
@@ -51,8 +59,9 @@ export function createContainer(env: Env, opts: ContainerOptions = {}) {
     log,
     db: env.DB,
     adapters: opts.adapters ?? createAdapters(config, now),
-    orders: createOrderService({ repo: orderRepo, now }),
     orderRepo,
+    orders,
+    alfTasks,
   };
 }
 

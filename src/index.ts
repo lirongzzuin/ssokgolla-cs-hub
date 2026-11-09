@@ -3,6 +3,7 @@ import type { Env } from './app/env';
 import { createErrorHandler } from './app/errors';
 import { createRouter } from './app/hono';
 import { createLogger } from './app/logger';
+import { alfTaskRoutes } from './modules/alf-tasks';
 
 /**
  * 앱 조립. 라우트 마운트와 scheduled 연결만 두고 로직은 넣지 않는다.
@@ -19,6 +20,7 @@ app.onError(createErrorHandler((c) => c.var.container?.log ?? createLogger({ ser
 app.notFound((c) => c.json({ ok: false, reasonCode: 'NOT_FOUND', message: '없는 경로입니다' }, 404));
 
 app.get('/health', (c) => c.json({ ok: true, dataSource: c.var.container.config.dataSource }));
+app.route('/alf', alfTaskRoutes);
 
 export default {
   fetch: app.fetch,

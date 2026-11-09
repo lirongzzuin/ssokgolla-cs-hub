@@ -25,7 +25,7 @@ const SELF_SERVICE: Record<Channel, string> = {
 type MessageBuilder = (view: OrderView) => string;
 
 const shipmentLine = (view: OrderView): string =>
-  view.shipment ? `${view.shipment.carrier} 송장번호 ${view.shipment.trackingNo}로 배송 조회하실 수 있어요.` : '';
+  view.shipment ? `배송 조회: ${view.shipment.carrier} ${view.shipment.trackingNo}` : '';
 
 const MESSAGES: Record<ReasonCode, MessageBuilder> = {
   CANCELABLE_BEFORE_SUPPLIER_ORDER: ({ order }) =>
