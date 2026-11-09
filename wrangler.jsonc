@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ssokgolla-cs-hub",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+  // 주문 동기화·쿠팡 문의 브릿지: 10분마다
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cs-hub",
+      // 배포 전 `wrangler d1 create cs-hub` 결과의 database_id로 교체. 로컬 개발은 이 값 그대로 동작한다.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "DATA_SOURCE": "mock",
+    "ENABLE_COUPANG_BRIDGE": "false",
+    "ENGINE_BASE_URL": ""
+  }
+}

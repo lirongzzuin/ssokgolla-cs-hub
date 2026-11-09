@@ -1,0 +1,19 @@
+{
+  // scripts/*.ts 는 Node 24가 타입만 지우고 직접 실행한다(tsx 없음).
+  // src 파일을 가져올 때는 .ts 확장자를 붙이고, 가져오는 src 파일은 type import만 써야 한다.
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "lib": ["es2024"],
+    "types": ["node", "../worker-configuration.d.ts"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["."]
+}
