@@ -5,6 +5,7 @@ import {
   addressChangeRequestSchema,
   cancelRequestSchema,
   lookupRequestSchema,
+  pingRequestSchema,
   returnRequestSchema,
   type TaskResponse,
 } from './schemas';
@@ -20,6 +21,22 @@ import {
 export const alfTaskRoutes = createRouter();
 
 alfTaskRoutes.use('*', requireAlfSecret);
+
+/**
+ * 연결 확인용. 채널톡 Code 스텝에서 axios 호출·시크릿·상담 ID 경로가 맞는지 확인한다.
+ * 받은 chatId를 그대로 돌려줘서 context에서 꺼낸 값이 실제 상담 ID인지 눈으로 볼 수 있게 한다.
+ */
+alfTaskRoutes.post('/ping', async (c) => {
+  const req = await parseJson(c, pingRequestSchema);
+  c.var.container.log.info('alf_ping', { chatId: req.chatId ?? null });
+  return c.json({
+    ok: true,
+    decision: 'INFO',
+    reasonCode: 'PONG',
+    customerMessage: `허브 연결 정상 (chatId: ${req.chatId ?? '없음'})`,
+    data: null,
+  });
+});
 
 alfTaskRoutes.post('/orders/lookup', async (c) => {
   const req = await parseJson(c, lookupRequestSchema);

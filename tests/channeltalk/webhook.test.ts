@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { app } from '../../src/index';
-import { parseWebhook } from '../../src/modules/channeltalk';
+import { describeShape, parseWebhook } from '../../src/modules/channeltalk';
 import { resetAndSeed } from '../helpers';
 
 const NOW = new Date('2026-11-09T03:00:00Z');
@@ -116,5 +116,33 @@ describe('ALF 태스크 결과 ↔ 상담 연결', () => {
   it('웹훅보다 태스크가 먼저 와도 상담이 만들어진다', async () => {
     await alf('lookup', { orderNo: '2026110600000106', phoneLast4: '1206', chatId: 'chat-e' });
     expect(await inquiry('chat-e')).toMatchObject({ category: 'ORDER_STATUS', escalated: 0, handled_by: 'alf' });
+  });
+});
+
+describe('웹훅 필드 확인 도우미', () => {
+  it('describeShape는 값 없이 키 구조와 타입만 남긴다', () => {
+    const shape = describeShape({
+      type: 'Message',
+      entity: {
+        chatId: 'c1',
+        personType: 'user',
+        plainText: '010-0000-1234 홍길동',
+        createdAt: 1,
+        files: [{ name: 'a' }],
+      },
+      refers: null,
+    });
+    expect(shape).toEqual({
+      type: 'string',
+      entity: {
+        chatId: 'string',
+        personType: 'string',
+        plainText: 'string',
+        createdAt: 'number',
+        files: [{ name: 'string' }],
+      },
+      refers: 'null',
+    });
+    expect(JSON.stringify(shape)).not.toMatch(/홍길동|0000-1234|Message/);
   });
 });

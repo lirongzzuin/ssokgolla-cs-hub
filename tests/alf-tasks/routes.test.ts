@@ -66,6 +66,11 @@ describe('입력 검증', () => {
     expect(r.ok).toBe(true);
   });
 
+  it.each([123456, null])('chatId가 숫자·null이어도 받는다(%s)', async (chatId) => {
+    const r = await callOk('lookup', { orderNo: '2026110900000101', phoneLast4: '1201', chatId });
+    expect(r.ok).toBe(true);
+  });
+
   it('JSON이 아니면 400', async () => {
     const res = await app.request(
       '/alf/orders/lookup',
@@ -186,5 +191,35 @@ describe('task_logs', () => {
       reason_code: 'ORDER_NOT_FOUND',
       sales_order_id: null,
     });
+  });
+});
+
+describe('POST /alf/ping (채널톡 연결 확인)', () => {
+  it('받은 chatId를 그대로 돌려준다', async () => {
+    const res = await app.request(
+      '/alf/ping',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-ALF-Secret': env.ALF_SECRET ?? '' },
+        body: JSON.stringify({ chatId: 12345 }),
+      },
+      env,
+    );
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      reasonCode: 'PONG',
+      customerMessage: '허브 연결 정상 (chatId: 12345)',
+    });
+  });
+
+  it('chatId가 없어도 동작, 시크릿은 필요', async () => {
+    const ok = await app.request(
+      '/alf/ping',
+      { method: 'POST', headers: { 'X-ALF-Secret': env.ALF_SECRET ?? '' }, body: '{}' },
+      env,
+    );
+    expect(await ok.json()).toMatchObject({ customerMessage: '허브 연결 정상 (chatId: 없음)' });
+    const denied = await app.request('/alf/ping', { method: 'POST', body: '{}' }, env);
+    expect(denied.status).toBe(401);
   });
 });

@@ -1,6 +1,6 @@
 import { createRouter } from '../../app/hono';
 import { requireSecret } from '../../app/security';
-import { parseWebhook } from './webhook.parser';
+import { describeShape, parseWebhook } from './webhook.parser';
 
 /**
  * POST /webhooks/channeltalk?token=...
@@ -22,12 +22,19 @@ channelTalkWebhookRoutes.use(
 );
 
 channelTalkWebhookRoutes.post('/channeltalk', async (c) => {
-  const { inquiries, log, now } = c.var.container;
+  const { inquiries, log, now, config } = c.var.container;
   const body = await c.req.json().catch(() => null);
   const parsed = parseWebhook(body, now());
 
+  // 필드 이름이 문서로 확인되지 않아(TODO(verify-api)) 실제 페이로드의 구조를 볼 수 있게 남긴다. 값은 남기지 않는다.
+  if (config.webhookDebug) log.info('channeltalk_webhook_shape', { shape: JSON.stringify(describeShape(body)) });
+
   if ('ignored' in parsed) {
-    log.debug('channeltalk_webhook_ignored', { reason: parsed.ignored });
+    const missingFields = parsed.ignored.endsWith('_fields_missing');
+    // 필드가 없어서 버린 이벤트는 파서 수정이 필요하다는 신호라 구조를 경고로 남긴다
+    if (missingFields)
+      log.warn('channeltalk_webhook_unparsed', { reason: parsed.ignored, shape: JSON.stringify(describeShape(body)) });
+    else log.debug('channeltalk_webhook_ignored', { reason: parsed.ignored });
     return c.json({ ok: true, ignored: parsed.ignored });
   }
   await inquiries.handleChatEvent(parsed.event);

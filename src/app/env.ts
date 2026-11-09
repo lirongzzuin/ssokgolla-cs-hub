@@ -14,6 +14,8 @@ export interface Env {
   CHANNELTALK_WEBHOOK_TOKEN?: string;
   ENGINE_BASE_URL?: string;
   ENGINE_TOKEN?: string;
+  /** true면 채널톡 웹훅 본문의 키 구조(값 제외)를 로그로 남긴다. 실제 필드 이름 확인용 */
+  WEBHOOK_DEBUG?: string;
 }
 
 const configSchema = z.object({
@@ -21,6 +23,7 @@ const configSchema = z.object({
   coupangBridgeEnabled: z.boolean().default(false),
   engineBaseUrl: z.string().optional(),
   engineToken: z.string().optional(),
+  webhookDebug: z.boolean().default(false),
 });
 
 export type AppConfig = z.infer<typeof configSchema>;
@@ -34,5 +37,6 @@ export function readConfig(env: Env): AppConfig {
     coupangBridgeEnabled: env.ENABLE_COUPANG_BRIDGE === 'true',
     engineBaseUrl: emptyToUndefined(env.ENGINE_BASE_URL),
     engineToken: emptyToUndefined(env.ENGINE_TOKEN),
+    webhookDebug: env.WEBHOOK_DEBUG === 'true',
   });
 }

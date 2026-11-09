@@ -65,3 +65,16 @@ export function parseWebhook(body: unknown, now: Date): ParseResult {
 
   return { ignored: `unsupported_type:${env.data.type}` };
 }
+
+/**
+ * 값을 빼고 키 구조와 타입만 남긴다. 실제 웹훅의 필드 이름을 확인할 때 로그로 쓴다(개인정보가 남지 않음).
+ * 예: { type: 'string', entity: { chatId: 'string', personType: 'string', createdAt: 'number' } }
+ */
+export function describeShape(value: unknown, depth = 0): unknown {
+  if (depth > 4) return '…';
+  if (Array.isArray(value)) return value.length ? [describeShape(value[0], depth + 1)] : [];
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, describeShape(v, depth + 1)]));
+  }
+  return value === null ? 'null' : typeof value;
+}

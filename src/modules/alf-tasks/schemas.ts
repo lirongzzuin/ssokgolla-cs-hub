@@ -20,10 +20,18 @@ export const orderRequestSchema = z.strictObject({
   orderNo,
   phoneLast4,
   channel: z.enum(CHANNELS).optional(),
-  chatId: z.string().min(1).max(64).optional(),
+  // 채널톡 context의 상담 ID 타입(문자열/숫자)이 확인되지 않아 둘 다 받는다. 값이 없으면(null) 생략과 같게 본다.
+  chatId: z.preprocess(
+    (v) => (v === null || v === '' ? undefined : typeof v === 'number' ? String(v) : v),
+    z.string().max(64).optional(),
+  ),
 });
 
 export const lookupRequestSchema = orderRequestSchema;
+/** 연결 확인. chatId가 있으면 그대로 돌려준다 */
+export const pingRequestSchema = z.object({ chatId: z.unknown().optional() }).transform((v) => ({
+  chatId: typeof v.chatId === 'string' || typeof v.chatId === 'number' ? String(v.chatId) : undefined,
+}));
 export const cancelRequestSchema = orderRequestSchema;
 // 새 주소는 받지 않는다: 판매자가 배송지를 바꾸는 API가 없고(고객이 직접 변경), 주소 원문을 저장하지 않기 위해(D2)
 export const addressChangeRequestSchema = orderRequestSchema;

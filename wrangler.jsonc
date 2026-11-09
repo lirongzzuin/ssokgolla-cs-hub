@@ -18,6 +18,8 @@
   "vars": {
     "DATA_SOURCE": "mock",
     "ENABLE_COUPANG_BRIDGE": "false",
-    "ENGINE_BASE_URL": ""
+    "ENGINE_BASE_URL": "",
+    // true면 채널톡 웹훅 본문의 키 구조(값 제외)를 로그로 남긴다. 로컬은 .dev.vars가 우선
+    "WEBHOOK_DEBUG": "false"
   }
 }
