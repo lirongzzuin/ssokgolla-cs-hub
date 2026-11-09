@@ -5,7 +5,7 @@ import { createOrderRepository, deriveStatus } from '../src/modules/orders';
 /** 테스트마다 깨끗한 DB에 mock 20건을 넣는다(seed 스크립트와 같은 데이터) */
 export async function resetAndSeed(now = new Date()) {
   await env.DB.exec(
-    'DELETE FROM task_logs; DELETE FROM inquiries; DELETE FROM shipments; DELETE FROM supplier_orders; DELETE FROM sales_orders; DELETE FROM sync_state;',
+    'DELETE FROM coupang_bridge_links; DELETE FROM task_logs; DELETE FROM inquiries; DELETE FROM shipments; DELETE FROM supplier_orders; DELETE FROM sales_orders; DELETE FROM sync_state;',
   );
   const repo = createOrderRepository(env.DB);
   const fixtures = buildMockOrders(now);
