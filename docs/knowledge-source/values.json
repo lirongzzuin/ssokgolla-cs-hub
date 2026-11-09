@@ -1,10 +1,10 @@
 {
   "store_name": "쏙골라마켓",
-  "dispatch_business_days": "",
-  "shipping_fee": "",
-  "free_shipping_threshold": "",
-  "remote_area_extra_fee": "",
-  "return_shipping_fee_oneway": "",
-  "exchange_shipping_fee_roundtrip": "",
-  "cs_hours": ""
+  "dispatch_business_days": "1~3일",
+  "shipping_fee": "3,000원",
+  "free_shipping_threshold": "30,000원",
+  "remote_area_extra_fee": "3,000원(제주) / 5,000원(도서산간)",
+  "return_shipping_fee_oneway": "3,000원",
+  "exchange_shipping_fee_roundtrip": "6,000원",
+  "cs_hours": "평일 오전 10시~오후 5시(점심 12시~1시 제외)"
 }

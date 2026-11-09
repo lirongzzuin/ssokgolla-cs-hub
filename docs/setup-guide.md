@@ -41,18 +41,9 @@ brew install cloudflared
 
 **확인**: `npm test`가 모두 통과한다.
 
-## 2. 지식 값 채우기 (15분, 처음 한 번)
+## 2. 지식 만들기 (2분, 처음 한 번)
 
-1. `docs/knowledge-source/values.json`의 빈 값을 채운다. 데모 상점이므로 실제 스토어 설정과 같게 넣거나, 그럴듯한 값으로 정해도 된다.
-   | 키 | 예시 |
-   |---|---|
-   | `dispatch_business_days` | `1~3영업일` |
-   | `shipping_fee` | `3,000원` |
-   | `free_shipping_threshold` | `30,000원` |
-   | `remote_area_extra_fee` | `3,000원` |
-   | `return_shipping_fee_oneway` | `3,000원` |
-   | `exchange_shipping_fee_roundtrip` | `6,000원` |
-   | `cs_hours` | `평일 10:00~17:00` |
+1. `docs/knowledge-source/values.json`에는 **데모 상점용 값이 이미 들어 있다**(배송비 3,000원, 30,000원 이상 무료, 출고 1~3영업일 등). 실제 운영 값이 아니라 시연용이다. 바꾸고 싶을 때만 고친다.
 2. 정책 원문(`docs/knowledge-source/*/*.md`)을 읽고 어색한 문장을 고친다(선택).
 3. `npm run build-knowledge`
 
