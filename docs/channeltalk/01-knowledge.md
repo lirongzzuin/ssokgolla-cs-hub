@@ -40,7 +40,7 @@ ALF가 답변 근거로 쓰는 문서 목록과 등록 방법이다.
 
 ## 등록 절차
 
-1. `docs/knowledge-source/values.json`의 빈 값을 실제 스토어 설정과 같게 채운다(배송비, 출고 소요일, 반품 배송비, 상담 시간).
+1. `docs/knowledge-source/values.json`에는 데모 상점용 값이 들어 있다(시연용, 실제 운영 값 아님). 바꿀 때만 고친다.
 2. `npm run build-knowledge` → 모든 줄이 ✓ 인지 확인(✗면 빈 값·금지어를 고친다).
 3. 채널톡 ALF 지식에 위 폴더 구조대로 업로드한다.
 4. `docs/test-scenarios.md`의 A(단순 FAQ) 문항으로 답변을 확인한다.
