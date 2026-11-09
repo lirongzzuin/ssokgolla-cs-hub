@@ -19,7 +19,9 @@
     "db:migrate": "wrangler d1 migrations apply cs-hub --local",
     "seed": "node scripts/seed.ts && wrangler d1 execute cs-hub --local --file .wrangler/seed.sql",
     "report": "node scripts/report.ts",
-    "build-knowledge": "node scripts/build-knowledge.ts"
+    "build-knowledge": "node scripts/build-knowledge.ts",
+    "seed:remote": "node scripts/seed.ts && wrangler d1 execute cs-hub --remote --file .wrangler/seed.sql",
+    "db:migrate:remote": "wrangler d1 migrations apply cs-hub --remote"
   },
   "dependencies": {
     "hono": "^4.13.17",
