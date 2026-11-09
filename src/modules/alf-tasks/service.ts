@@ -11,6 +11,7 @@ import type { OrderRequest, TaskResponse } from './schemas';
 export interface TaskOutcomeListener {
   /** 태스크 결과를 상담 기록(inquiries)에 반영. chatId가 있을 때만 불린다. */
   onTaskOutcome(input: {
+    taskName: string;
     chatId: string;
     salesOrderId: number | null;
     decision: TaskResponse['decision'];
@@ -54,6 +55,7 @@ export function createAlfTaskService(deps: {
     });
     if (req.chatId && deps.outcomeListener) {
       await deps.outcomeListener.onTaskOutcome({
+        taskName: TASK_NAME[action],
         chatId: req.chatId,
         salesOrderId,
         decision: res.decision,
