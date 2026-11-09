@@ -191,6 +191,10 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 
 - 유니크: `sales_orders(channel, channel_order_id)`, `inquiries(source, external_id)`
 - 전화번호 전체, 실명, 주소 원문은 저장하지 않는다.
+- 추가 테이블
+  - `sync_state(name, cursor)`: 증분 동기화 커서(`orders`, `coupang_bridge`). 커서는 "실행을 시작한 시각"으로 저장해 실행 중 바뀐 주문을 놓치지 않는다.
+  - `coupang_bridge_links(inquiry_id, chat_id, answered_at)` (`0002`): 쿠팡 문의 ↔ 브릿지가 만든 채널톡 상담. ALF 답변을 쿠팡에 되돌릴 때 쓴다.
+- 동기화 upsert는 **"더 최근에 바뀐 쪽이 이긴다"**(`updated_at` 비교). 허브가 표시한 `CANCEL_REQUESTED`는 그 뒤에 바뀐 원천 데이터만 덮어쓴다.
 
 ## 6. 채널톡 연동
 
@@ -221,6 +225,8 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 - 태스크가 ESCALATE를 받았거나 상담원 메시지가 있으면 `escalated=true`
 - 이관 사유: `task_logs.reason_code`(chatId로 연결). 없으면 `UNKNOWN`
 - ALF가 보낸 메시지의 `personType`이 `bot`인지는 문서에 없다 → `TODO(verify-api)`. 실제 웹훅 페이로드를 받아 확인한다
+- 웹훅 최상위 키(`event`, `type`, `entity`, `refers`)는 확인했지만 `entity` 안의 필드 이름(chatId, plainText, createdAt)은 문서 예시를 읽지 못해 미확인이다. 필드가 없으면 이벤트를 저장하지 않고 무시한다(`webhook.parser.ts`).
+- **상담 1건 = `inquiries` 1행.** 브릿지한 쿠팡 문의는 채널톡 상담(chatId)으로만 센다. 쿠팡 고객센터 이관 문의만 `source=coupang` 행으로 남는다.
 
 ### 6.3 Open API (쿠팡 브릿지)
 
@@ -238,7 +244,8 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 | POST | `/alf/orders/address-change` | `X-ALF-Secret` | orderNo + phoneLast4 (새 주소는 받지 않음) |
 | POST | `/alf/orders/return-request` | `X-ALF-Secret` | orderNo + phoneLast4 + reason |
 | POST | `/webhooks/channeltalk?token=` | query token | 상담 이벤트 적재 |
-| GET | `/reports/summary?from=&to=` | `X-Admin-Secret` | 운영 지표 |
+| GET | `/reports/summary?from=&to=[&format=md]` | `X-Admin-Secret` | 운영 지표(JSON 또는 마크다운 표) |
+| GET | `/health` | 없음 | 상태·데이터 출처 |
 
 - **본인 확인 (Phase 0 결정):** 모든 `/alf/*`는 `orderNo`와 `phoneLast4`를 **둘 다** 받는다. 뒤 4자리만으로 조회하는 방식은 경우의 수가 1만 개뿐이라 남의 주문을 쉽게 볼 수 있어서 넣지 않았다.
 - 주문이 없을 때와 뒤 4자리가 틀렸을 때 **같은 응답**(`ORDER_NOT_FOUND`)을 준다. 주문번호가 존재하는지 알려 주지 않기 위해서다.
@@ -285,3 +292,18 @@ ALLOW가 나오면 고객이 판매채널 앱에서 직접 처리하는 방법�
 | D5 | 스크립트는 `node scripts/x.ts`(Node 24 기본 TS 실행) | tsx 의존성 불필요 |
 | D6 | `decision`에 `INFO` 추가 | 배송 조회는 허용·거부할 대상이 아님 |
 | D7 | 반품 기간이 지나면 DENY가 아니라 ESCALATE | 상품 하자 반품은 기간이 다를 수 있어 사람이 판단 |
+| D8 | 주문 없음(`ORDER_NOT_FOUND`)은 HTTP 200 | 고객 입력 실수는 업무상 정상 결과. ALF가 "요청 실패" 분기가 아니라 재질문으로 가게 한다 |
+| D9 | 반품 사유는 자유 문장이 아니라 분류(`CHANGE_OF_MIND·DEFECT·WRONG_ITEM·OTHER`) | 자유 문장에는 개인정보가 섞이기 쉽다. 하자·오배송은 정책이 ESCALATE |
+| D10 | 테스트는 `@cloudflare/vitest-plugin`(Workers 런타임) | 기존 `vitest-pool-workers`가 이 이름으로 바뀌고 deprecated 됨 |
+| D11 | 쿠팡 브릿지 연결 테이블(`0002`) | 쿠팡 고객은 채널톡을 못 보므로 ALF 답변을 쿠팡에 되돌려야 하고, 그러려면 상담↔문의 연결이 필요 |
+| D12 | 브릿지는 자체 포트(`ChatCreator`)만 안다 | channeltalk → inquiries 한 방향 의존 유지(순환 방지) |
+| D13 | 지식 원문의 운영자 메모는 빌드 때 제거 + 금지어 검사 | 위탁 내부 사정이 ALF 답변으로 새는 것을 기계적으로 막는다 |
+
+## 12. 알려진 한계
+
+| 한계 | 영향 | 개선 방향 |
+|---|---|---|
+| 주문번호 1개 = 상품 1줄로 단순화 | 여러 상품을 한 번에 주문하면 대표 상품만 보인다 | `sales_orders`를 상품주문 단위로 나누고 lookup이 목록을 반환 |
+| 판매채널 수취인 번호가 안심번호일 수 있음 | 뒤 4자리가 고객이 아는 번호와 달라 본인 확인 실패 | 엔진에서 주문자 번호 기준 `phone_last4` 제공(엔진 계약에 포함) |
+| 브릿지는 첫 bot/manager 메시지를 쿠팡 답변으로 등록 | ALF가 메시지를 나눠 보내면 답변이 잘린다 | 실제 상담 확인 후 "답변 확정" 기준(태그·종료) 도입 |
+| mock 데이터 시각이 실행 시점 기준 상대값 | seed 후 며칠 지나면 반품 기간 판단이 바뀐다 | 테스트 전 `npm run seed` 다시 실행 |
