@@ -1,8 +1,11 @@
-# 로컬 개발용 비밀값. `cp .dev.vars.example .dev.vars` 후 사용한다. .dev.vars는 커밋하지 않는다.
-# 실서버 값은 `wrangler secret put <이름>`으로 등록하고, 아래 개발용 값을 그대로 쓰지 않는다.
-ALF_SECRET=dev-alf-secret
-ADMIN_SECRET=dev-admin-secret
-CHANNELTALK_WEBHOOK_TOKEN=dev-webhook-token
+# 로컬 개발용 값의 형식 예시. 실제 파일은 `npm run setup`이 무작위 시크릿으로 만든다.
+# .dev.vars는 커밋하지 않는다(.gitignore). 아래 예시 값을 그대로 쓰지 않는다(터널로 인터넷에 열리기 때문).
+ALF_SECRET=change-me
+ADMIN_SECRET=change-me
+CHANNELTALK_WEBHOOK_TOKEN=change-me
 
-# DATA_SOURCE=live 일 때만 필요(dropship-engine 읽기 전용 API 토큰)
+# 채널톡 웹훅 본문의 키 구조(값 제외)를 로그로 남김 — 필드 이름 확인용
+WEBHOOK_DEBUG=true
+
+# DATA_SOURCE=live(확장용, 운영하지 않음)일 때만 필요
 ENGINE_TOKEN=

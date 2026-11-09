@@ -21,7 +21,11 @@
     "report": "node scripts/report.ts",
     "build-knowledge": "node scripts/build-knowledge.ts",
     "seed:remote": "node scripts/seed.ts && wrangler d1 execute cs-hub --remote --file .wrangler/seed.sql",
-    "db:migrate:remote": "wrangler d1 migrations apply cs-hub --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply cs-hub --remote",
+    "setup": "node scripts/setup-dev.ts",
+    "tunnel": "cloudflared tunnel --url http://localhost:8787",
+    "task-code": "node scripts/task-code.ts",
+    "check:public": "node scripts/check-public.ts"
   },
   "dependencies": {
     "hono": "^4.13.17",
