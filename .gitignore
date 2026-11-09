@@ -1,7 +1,42 @@
-.dev.vars
-.DS_Store
-.vitest/
-.wrangler/
-coverage/
-dist/
+# 의존성·빌드 산출물
 node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Wrangler·Vitest 로컬 상태(로컬 D1 데이터 포함)
+.wrangler/
+.vitest/
+.mf/
+
+# 시크릿 — 절대 커밋하지 않는다(.dev.vars.example만 커밋)
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+
+# 채널톡에 붙여넣는 생성 코드(터널 주소·시크릿 포함) — dist/channeltalk/
+# 캡처 원본(가리기 전) — 가린 이미지만 docs/images/에 둔다
+screenshots-raw/
+
+# 로그·덤프
+*.log
+npm-debug.log*
+*.sqlite
+*.sqlite3
+*.db
+*.bundle
+
+# 에디터·OS·로컬 도구
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+.claude/settings.local.json
